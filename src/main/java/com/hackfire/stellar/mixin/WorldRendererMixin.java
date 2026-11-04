@@ -4,6 +4,7 @@ import com.hackfire.stellar.StellarClient;
 import com.hackfire.stellar.render.StellarSkyRenderer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.Camera;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 import org.joml.Matrix4f;
@@ -35,6 +36,8 @@ public abstract class WorldRendererMixin {
         } else {
             night = (23000L - time) / 1000.0f;
         }
-        StellarSkyRenderer.renderSky(matrices, StellarClient.config(), night);
+        float rain = client.world.getRainGradient(tickDelta);
+        float weatherVisibility = 1.0f - MathHelper.clamp(rain, 0.0f, 1.0f) * 0.68f;
+        StellarSkyRenderer.renderSky(matrices, StellarClient.config(), night, weatherVisibility);
     }
 }
