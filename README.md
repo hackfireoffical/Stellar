@@ -10,6 +10,7 @@ This repository contains the first development foundation: a Fabric client entry
 - Cached procedural star positions (no per-frame random generation).
 - Configurable star count and brightness.
 - No custom framebuffer, bloom, temporal effects, or post-processing.
+- Initial pass uses Fabric's supported `LAST` event; it is a temporary integration point, not yet a true sky-stage replacement. Sky ordering/orientation still needs in-game validation.
 - Client-side only; no server installation required.
 
 ### Configuration
