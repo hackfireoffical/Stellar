@@ -15,6 +15,7 @@ Stellar injects its sky geometry at the end of Minecraft's overworld sky-render 
 - Two distant three-arm spiral galaxies with a compact bright core, rendered as low-cost geometry.
 - Rain- and thunder-aware atmospheric fading; thunderstorms dim distant sky details more strongly than ordinary rain.
 - Lightweight daytime blue horizon scattering and warm orange/pink sunrise/sunset bands.
+- Subtle configurable blue-cyan water tint that preserves biome variation; vanilla water transparency and animation remain untouched.
 - Eighteen cached, subtle high-sky cirrus wisps that fade with weather and warm gently at twilight; positions and tangent bases are precomputed to avoid per-frame orientation math.
 - Smooth time-driven transition between daylight, twilight, and night layers.
 - Automatic fade-in at dusk and fade-out at dawn.
@@ -38,12 +39,14 @@ After launching once, edit `.minecraft/config/stellar.json`:
   "distantGalaxyBrightness": 0.65,
   "shootingStars": true,
   "cometChancePerSecond": 0.012,
+  "waterTintEnabled": true,
+  "waterTintStrength": 0.22,
   "atmosphericWisps": true,
   "atmosphericWispStrength": 0.7
 }
 ```
 
-`shootingStars` toggles the animated streaks, and `cometChancePerSecond` controls their spawn chance. `atmosphericWisps` toggles the subtle daytime cirrus layer, while `atmosphericWispStrength` controls its opacity. Restart Minecraft after editing.
+`shootingStars` toggles the animated streaks, and `cometChancePerSecond` controls their spawn chance. `atmosphericWisps` toggles the subtle daytime cirrus layer, while `atmosphericWispStrength` controls its opacity. `waterTintEnabled` toggles the subtle water color adjustment, and `waterTintStrength` controls how strongly it blends with each biome's original water color. Restart Minecraft after editing.
 
 ## Build and install
 
@@ -68,6 +71,7 @@ The project compiles in CI, but visual behavior still needs in-game validation. 
 - [x] Rain- and thunder-aware galaxy, nebula, and daytime atmosphere fading
 - [x] Cached, configurable atmospheric cirrus wisps
 - [x] Precomputed cirrus orientation data to reduce mobile CPU work
+- [x] Configurable biome-preserving water tint
 - [x] Tick-interpolated day/night and twilight transitions
 - [ ] Configuration screen and quality presets
 - [ ] Mali / MobileGL / Sodium compatibility testing
