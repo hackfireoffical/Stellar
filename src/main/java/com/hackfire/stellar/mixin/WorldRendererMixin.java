@@ -36,8 +36,10 @@ public abstract class WorldRendererMixin {
         } else {
             night = (23000L - time) / 1000.0f;
         }
-        float rain = client.world.getRainGradient(tickDelta);
-        float weatherVisibility = 1.0f - MathHelper.clamp(rain, 0.0f, 1.0f) * 0.68f;
+        float rain = MathHelper.clamp(client.world.getRainGradient(tickDelta), 0.0f, 1.0f);
+        float thunder = MathHelper.clamp(client.world.getThunderGradient(tickDelta), 0.0f, 1.0f);
+        // Thunderstorms suppress the distant sky more strongly than ordinary rain.
+        float weatherVisibility = 1.0f - Math.max(rain * 0.68f, thunder * 0.88f);
         float sunset = time >= 11000L && time <= 15000L
                 ? 1.0f - Math.abs(time - 13000L) / 2000.0f : 0.0f;
         float sunrise = time >= 22000L
