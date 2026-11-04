@@ -23,6 +23,10 @@ public final class StellarSkyRenderer {
     // x, y, z, half-size, brightness, red, green, blue
     private static final float[] STARS = new float[MAX_STARS * 8];
     private static int generatedCount = -1;
+    private static final int NEBULA_COUNT = 32;
+    // x, y, z, radius, red, green, blue, alpha
+    private static final float[] NEBULAE = new float[NEBULA_COUNT * 8];
+    private static boolean nebulaeGenerated;
     private static final int MAX_COMETS = 2;
     private static final float[] COMET_ANGLE = new float[MAX_COMETS];
     private static final float[] COMET_HEIGHT = new float[MAX_COMETS];
@@ -33,6 +37,73 @@ public final class StellarSkyRenderer {
     private static long lastCometUpdateNanos;
 
     private StellarSkyRenderer() { }
+
+    private static void generateNebulae() {
+        Random random = Random.create(0x4E8A1A5L);
+        for (int i = 0; i < NEBULA_COUNT; i++) {
+            double y = Math.max(-0.32, Math.min(0.32, random.nextGaussian() * 0.13));
+            double angle = random.nextDouble() * Math.PI * 2.0;
+            double ring = Math.sqrt(1.0 - y * y);
+            int p = i * 8;
+            NEBULAE[p] = (float) Math.cos(angle) * (float) ring;
+            NEBULAE[p + 1] = (float) y;
+            NEBULAE[p + 2] = (float) Math.sin(angle) * (float) ring;
+            NEBULAE[p + 3] = 1.8f + random.nextFloat() * 3.8f;
+            boolean violet = random.nextFloat() < 0.55f;
+            NEBULAE[p + 4] = violet ? 112.0f : 66.0f;
+            NEBULAE[p + 5] = violet ? 82.0f : 126.0f;
+            NEBULAE[p + 6] = violet ? 190.0f : 220.0f;
+            NEBULAE[p + 7] = 4.0f + random.nextFloat() * 5.0f;
+        }
+        nebulaeGenerated = true;
+    }
+
+    private static void addNebulae(BufferBuilder buffer, org.joml.Matrix4f matrix,
+                                   float night, float strength) {
+        if (!nebulaeGenerated) generateNebulae();
+        for (int i = 0; i < NEBULA_COUNT; i++) {
+            int p = i * 8;
+            float dx = NEBULAE[p], dy = NEBULAE[p + 1], dz = NEBULAE[p + 2];
+            float centerX = dx * (RADIUS - 1.0f);
+            float centerY = dy * (RADIUS - 1.0f);
+            float centerZ = dz * (RADIUS - 1.0f);
+            // Tangent basis keeps each translucent patch facing the viewer at the sky dome.
+            float rightX = -dz, rightY = 0.0f, rightZ = dx;
+            float rightLength = (float) Math.sqrt(rightX * rightX + rightZ * rightZ);
+            if (rightLength < 0.001f) { rightX = 1.0f; rightZ = 0.0f; rightLength = 1.0f; }
+            rightX /= rightLength;
+            rightZ /= rightLength;
+            float upX = dy * rightZ;
+            float upY = dz * rightX - dx * rightZ;
+            float upZ = -dy * rightX;
+            float size = NEBULAE[p + 3];
+            int red = (int) NEBULAE[p + 4];
+            int green = (int) NEBULAE[p + 5];
+            int blue = (int) NEBULAE[p + 6];
+            int alpha = (int) (NEBULAE[p + 7] * strength * night);
+
+            // Two softly overlapping scales make a cloud-like patch from flat geometry.
+            addNebulaQuad(buffer, matrix, centerX, centerY, centerZ,
+                    rightX, rightY, rightZ, upX, upY, upZ, size, red, green, blue, alpha);
+            addNebulaQuad(buffer, matrix, centerX, centerY, centerZ,
+                    rightX, rightY, rightZ, upX, upY, upZ, size * 0.48f,
+                    Math.min(255, red + 28), Math.min(255, green + 24),
+                    Math.min(255, blue + 20), alpha + alpha / 2);
+        }
+    }
+
+    private static void addNebulaQuad(BufferBuilder buffer, org.joml.Matrix4f matrix,
+                                      float cx, float cy, float cz,
+                                      float rx, float ry, float rz,
+                                      float ux, float uy, float uz, float size,
+                                      int red, int green, int blue, int alpha) {
+        float rX = rx * size, rY = ry * size, rZ = rz * size;
+        float uX = ux * size * 0.62f, uY = uy * size * 0.62f, uZ = uz * size * 0.62f;
+        vertex(buffer, matrix, cx-rX-uX, cy-rY-uY, cz-rZ-uZ, red, green, blue, alpha);
+        vertex(buffer, matrix, cx-rX+uX, cy-rY+uY, cz-rZ+uZ, red, green, blue, alpha);
+        vertex(buffer, matrix, cx+rX+uX, cy+rY+uY, cz+rZ+uZ, red, green, blue, alpha);
+        vertex(buffer, matrix, cx+rX-uX, cy+rY-uY, cz+rZ-uZ, red, green, blue, alpha);
+    }
 
     private static void generate(int count) {
         Random random = Random.create(0x57E11A4L);
@@ -91,8 +162,9 @@ public final class StellarSkyRenderer {
             // A soft, segmented blue-violet galactic band. The nested strips
             // create a feathered haze without textures or extra draw calls.
             if (config.galaxyEnabled && config.galaxyBrightness > 0.001f) {
-                addGalaxyBand(buffer, matrix, night,
-                        MathHelper.clamp(config.galaxyBrightness, 0.0f, 1.0f));
+                float galaxyStrength = MathHelper.clamp(config.galaxyBrightness, 0.0f, 1.0f);
+                addGalaxyBand(buffer, matrix, night, galaxyStrength);
+                addNebulae(buffer, matrix, night, galaxyStrength);
             }
 
             for (int i = 0; i < count; i++) {
