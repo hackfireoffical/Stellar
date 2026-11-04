@@ -17,6 +17,8 @@ public final class StellarConfig {
     public float starBrightness = 0.82f;
     public boolean galaxyEnabled = true;
     public float galaxyBrightness = 0.75f;
+    public boolean distantGalaxies = true;
+    public float distantGalaxyBrightness = 0.65f;
     public boolean shootingStars = true;
     public float cometChancePerSecond = 0.012f;
 
@@ -38,6 +40,7 @@ public final class StellarConfig {
         starCount = Math.max(0, Math.min(1800, starCount));
         starBrightness = Math.max(0.0f, Math.min(1.0f, starBrightness));
         galaxyBrightness = Math.max(0.0f, Math.min(1.0f, galaxyBrightness));
+        distantGalaxyBrightness = Math.max(0.0f, Math.min(1.0f, distantGalaxyBrightness));
         cometChancePerSecond = Math.max(0.0f, Math.min(0.1f, cometChancePerSecond));
     }
 
