@@ -16,7 +16,7 @@ public final class StellarClient implements ClientModInitializer {
     public void onInitializeClient() {
         config = StellarConfig.load();
         StellarSkyRenderer renderer = new StellarSkyRenderer(() -> config);
-        WorldRenderEvents.AFTER_SKY.register(renderer::render);
+        WorldRenderEvents.LAST.register(renderer::render);
         LOGGER.info("Project Stellar {} initialized", "0.1.0");
     }
 
