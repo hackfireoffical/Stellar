@@ -11,6 +11,7 @@ Stellar injects its sky geometry at the end of Minecraft's overworld sky-render 
 - Cached procedural star field, generated once and reused.
 - Dense stars around a galactic band, with cool blue/lavender color variation.
 - Three-layer segmented blue-violet Milky Way haze, drawn in the same geometry batch.
+- 32 deterministic blue/purple nebula patches with layered translucent geometry; generated once and reused.
 - Automatic fade-in at dusk and fade-out at dawn.
 - Two-slot animated shooting-star pool with short cool-white tails; events are randomized and night-only.
 - Configurable star count, star brightness, galaxy visibility, and galaxy brightness.
@@ -49,7 +50,8 @@ The project compiles in CI, but visual behavior still needs in-game validation. 
 - [x] Low-cost Milky Way haze
 - [x] Day/night fade
 - [ ] Verify visual orientation, brightness, and render-state restoration in-game
-- [ ] Nebula and distant galaxy detail
+- [x] Lightweight nebula cloud patches
+- [ ] Distant spiral galaxy detail
 - [x] Lightweight shooting stars
 - [ ] Weather blending
 - [ ] Configuration screen and quality presets
