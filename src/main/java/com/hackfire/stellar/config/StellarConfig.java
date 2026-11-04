@@ -20,6 +20,8 @@ public final class StellarConfig {
     public boolean distantGalaxies = true;
     public float distantGalaxyBrightness = 0.65f;
     public boolean shootingStars = true;
+    public boolean atmosphericWisps = true;
+    public float atmosphericWispStrength = 0.7f;
     public float cometChancePerSecond = 0.012f;
 
     public static StellarConfig load() {
@@ -42,6 +44,7 @@ public final class StellarConfig {
         galaxyBrightness = Math.max(0.0f, Math.min(1.0f, galaxyBrightness));
         distantGalaxyBrightness = Math.max(0.0f, Math.min(1.0f, distantGalaxyBrightness));
         cometChancePerSecond = Math.max(0.0f, Math.min(0.1f, cometChancePerSecond));
+        atmosphericWispStrength = Math.max(0.0f, Math.min(1.0f, atmosphericWispStrength));
     }
 
     private void save() {
