@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "stellar",
+  "version": "${version}",
+  "name": "Project Stellar",
+  "description": "A lightweight, performance-first cinematic sky for Minecraft.",
+  "authors": ["HackFire"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": { "client": ["com.hackfire.stellar.StellarClient"] },
+  "depends": {
+    "fabricloader": ">=0.14.21",
+    "minecraft": "1.20.1",
+    "java": ">=17",
+    "fabric-api": "*"
+  }
+}
