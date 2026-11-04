@@ -19,6 +19,7 @@ Stellar injects its sky geometry at the end of Minecraft's overworld sky-render 
 - Automatic fade-in at dusk and fade-out at dawn.
 - Two-slot animated shooting-star pool with short cool-white tails; events are randomized and night-only.
 - Configurable star count, star brightness, galaxy visibility, and galaxy brightness.
+- Shared precomputed ring samples for atmosphere and galaxy bands, avoiding per-frame trigonometry and temporary geometry arrays.
 - No custom framebuffer, bloom, texture sampling, or post-processing.
 
 ### Configuration
