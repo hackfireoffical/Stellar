@@ -4,14 +4,16 @@ A performance-first cinematic sky mod for **Minecraft 1.20.1 + Fabric**.
 
 ## Current status
 
-The project now uses a dedicated Mixin injection at the end of Minecraft's overworld sky-render method instead of the late world-render event. This puts Stellar's geometry in the sky pass, before terrain rendering.
+Stellar injects its sky geometry at the end of Minecraft's overworld sky-render method, before terrain rendering.
 
 ### Implemented
 - Client-only Fabric mod.
 - Cached procedural star field, generated once and reused.
-- Dense star distribution around a galactic band with subtle cool/lavender color variation.
-- Configurable star count and brightness.
-- One position-color draw batch; no custom framebuffer, bloom, texture sampling, or post-processing.
+- Dense stars around a galactic band, with cool blue/lavender color variation.
+- Three-layer segmented blue-violet Milky Way haze, drawn in the same geometry batch.
+- Automatic fade-in at dusk and fade-out at dawn.
+- Configurable star count, star brightness, galaxy visibility, and galaxy brightness.
+- No custom framebuffer, bloom, texture sampling, or post-processing.
 
 ### Configuration
 
@@ -22,29 +24,33 @@ After launching once, edit `.minecraft/config/stellar.json`:
   "enabled": true,
   "starCount": 450,
   "starBrightness": 0.82,
+  "galaxyEnabled": true,
+  "galaxyBrightness": 0.75,
   "shootingStars": true,
   "cometChancePerSecond": 0.012
 }
 ```
 
-The comet options remain reserved for a later stage. Current rendering is stars only. Restart Minecraft after editing.
+The shooting-star/comet settings are reserved for a later stage and do not currently spawn comets. Restart Minecraft after editing.
 
 ## Build and install
 
-Requires Java 17. The GitHub Actions workflow builds the mod and uploads the JAR as an artifact. Install Fabric Loader for Minecraft 1.20.1 and Fabric API, then place the JAR in the `mods` folder.
+Requires Java 17. GitHub Actions builds the mod and uploads the JAR as an artifact. Install Fabric Loader for Minecraft 1.20.1 and Fabric API, then place the JAR in the `mods` folder.
 
 ## Compatibility
 
-The code is build-tested, but the rendering still needs in-game validation. **MobileGL, OpenGL ES, Sodium, Mali devices, and frame-generation compatibility are not yet verified.** The renderer avoids custom framebuffers and post-processing to keep the GPU workload modest.
+The project compiles in CI, but visual behavior still needs in-game validation. **MobileGL, OpenGL ES, Sodium, Mali devices, and frame-generation compatibility are not yet verified.** The renderer avoids custom framebuffers and post-processing to keep GPU cost modest.
 
 ## Roadmap
 - [x] Fabric 1.20.1 project foundation
 - [x] Cached procedural star field
 - [x] Dedicated sky-render hook
+- [x] Low-cost Milky Way haze
+- [x] Day/night fade
 - [ ] Verify visual orientation, brightness, and render-state restoration in-game
-- [ ] Milky Way haze and nebula layers
+- [ ] Nebula and distant galaxy detail
 - [ ] Shooting stars and comets
-- [ ] Day/night and weather blending
+- [ ] Weather blending
 - [ ] Configuration screen and quality presets
 - [ ] Mali / MobileGL / Sodium compatibility testing
 - [ ] Frame-generation compatibility testing
