@@ -280,19 +280,19 @@ public final class StellarSkyRenderer {
     }
 
 
-    /** Two tiny spiral galaxies, built from cached deterministic point geometry. */
-    private static void addDistantGalaxies(BufferBuilder buffer, org.joml.Matrix4f matrix,
-                                           float night, float strength) {
-        addSpiralGalaxy(buffer, matrix, 1.05f, 0.16f, 0.82f, night, strength,
-                118, 145, 235);
-        addSpiralGalaxy(buffer, matrix, 4.12f, -0.12f, 0.58f, night, strength,
-                174, 145, 238);
+    /** Cached geometry for two tiny spiral galaxies; only alpha is updated per frame. */
+    private static final float[][] SPIRAL_GEOMETRY = new float[2][3 * 22 * 6];
+    private static final float[][] SPIRAL_CORES = new float[2][4];
+    private static final int[] SPIRAL_RED = { 118, 174 };
+    private static final int[] SPIRAL_GREEN = { 145, 145 };
+    private static final int[] SPIRAL_BLUE = { 235, 238 };
+
+    static {
+        buildSpiralGeometry(0, 1.05f, 0.16f, 0.82f);
+        buildSpiralGeometry(1, 4.12f, -0.12f, 0.58f);
     }
 
-    private static void addSpiralGalaxy(BufferBuilder buffer, org.joml.Matrix4f matrix,
-                                       float centerAngle, float centerY, float scale,
-                                       float night, float strength,
-                                       int red, int green, int blue) {
+    private static void buildSpiralGeometry(int galaxy, float centerAngle, float centerY, float scale) {
         float horizontal = (float) Math.sqrt(1.0f - centerY * centerY);
         float dirX = (float) Math.cos(centerAngle) * horizontal;
         float dirY = centerY;
@@ -305,21 +305,39 @@ public final class StellarSkyRenderer {
         float cx = dirX * (RADIUS - 1.2f);
         float cy = dirY * (RADIUS - 1.2f);
         float cz = dirZ * (RADIUS - 1.2f);
-        final int arms = 3;
-        final int pointsPerArm = 22;
-        for (int arm = 0; arm < arms; arm++) {
-            for (int point = 0; point < pointsPerArm; point++) {
-                float t = point / (float) (pointsPerArm - 1);
+        float[] geometry = SPIRAL_GEOMETRY[galaxy];
+        int index = 0;
+        for (int arm = 0; arm < 3; arm++) {
+            for (int point = 0; point < 22; point++) {
+                float t = point / 21.0f;
                 float radius = (0.16f + t * 2.25f) * scale;
-                float angle = arm * (float) (Math.PI * 2.0 / arms) + t * 5.2f;
+                float angle = arm * (float) (Math.PI * 2.0 / 3.0) + t * 5.2f;
                 float localX = (float) Math.cos(angle) * radius;
                 float localY = (float) Math.sin(angle) * radius * 0.58f;
-                float x = cx + rightX * localX + upX * localY;
-                float y = cy + upY * localY;
-                float z = cz + rightZ * localX + upZ * localY;
-                float size = (0.035f + (1.0f - t) * 0.025f) * scale;
-                int alpha = (int) ((38.0f + (1.0f - t) * 42.0f) * night * strength);
-                int shade = 72 + (int) (28.0f * (1.0f - t));
+                geometry[index++] = cx + rightX * localX + upX * localY;
+                geometry[index++] = cy + upY * localY;
+                geometry[index++] = cz + rightZ * localX + upZ * localY;
+                geometry[index++] = (0.035f + (1.0f - t) * 0.025f) * scale;
+                geometry[index++] = 38.0f + (1.0f - t) * 42.0f;
+                geometry[index++] = 72.0f + 28.0f * (1.0f - t);
+            }
+        }
+        SPIRAL_CORES[galaxy][0] = cx;
+        SPIRAL_CORES[galaxy][1] = cy;
+        SPIRAL_CORES[galaxy][2] = cz;
+        SPIRAL_CORES[galaxy][3] = 0.22f * scale;
+    }
+
+    private static void addDistantGalaxies(BufferBuilder buffer, org.joml.Matrix4f matrix,
+                                           float night, float strength) {
+        for (int galaxy = 0; galaxy < 2; galaxy++) {
+            float[] geometry = SPIRAL_GEOMETRY[galaxy];
+            int red = SPIRAL_RED[galaxy], green = SPIRAL_GREEN[galaxy], blue = SPIRAL_BLUE[galaxy];
+            for (int i = 0; i < geometry.length; i += 6) {
+                float x = geometry[i], y = geometry[i + 1], z = geometry[i + 2];
+                float size = geometry[i + 3];
+                int alpha = (int) (geometry[i + 4] * night * strength);
+                int shade = (int) geometry[i + 5];
                 int r = Math.min(255, red * shade / 100);
                 int g = Math.min(255, green * shade / 100);
                 int b = Math.min(255, blue * shade / 100);
@@ -328,14 +346,14 @@ public final class StellarSkyRenderer {
                 vertex(buffer, matrix, x+size, y+size, z, r, g, b, alpha);
                 vertex(buffer, matrix, x+size, y-size, z, r, g, b, alpha);
             }
+            float[] core = SPIRAL_CORES[galaxy];
+            float half = core[3];
+            int coreAlpha = (int) (75.0f * night * strength);
+            vertex(buffer, matrix, core[0]-half, core[1]-half, core[2], 220, 225, 255, coreAlpha);
+            vertex(buffer, matrix, core[0]-half, core[1]+half, core[2], 220, 225, 255, coreAlpha);
+            vertex(buffer, matrix, core[0]+half, core[1]+half, core[2], 220, 225, 255, coreAlpha);
+            vertex(buffer, matrix, core[0]+half, core[1]-half, core[2], 220, 225, 255, coreAlpha);
         }
-        // Brighter central bulge.
-        float core = 0.22f * scale;
-        int coreAlpha = (int) (75.0f * night * strength);
-        vertex(buffer, matrix, cx-core, cy-core, cz, 220, 225, 255, coreAlpha);
-        vertex(buffer, matrix, cx-core, cy+core, cz, 220, 225, 255, coreAlpha);
-        vertex(buffer, matrix, cx+core, cy+core, cz, 220, 225, 255, coreAlpha);
-        vertex(buffer, matrix, cx+core, cy-core, cz, 220, 225, 255, coreAlpha);
     }
 
     /** Advances a tiny fixed pool of comets; no objects are allocated per frame. */
