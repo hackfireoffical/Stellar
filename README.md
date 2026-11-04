@@ -13,7 +13,7 @@ Stellar injects its sky geometry at the end of Minecraft's overworld sky-render 
 - Three-layer segmented blue-violet Milky Way haze, drawn in the same geometry batch.
 - 32 deterministic blue/purple nebula patches with layered translucent geometry; generated once and reused.
 - Two distant three-arm spiral galaxies with a compact bright core, rendered as low-cost geometry.
-- Rain-aware atmospheric fading for the galaxy and nebula layers.
+- Rain- and thunder-aware atmospheric fading; thunderstorms dim distant sky details more strongly than ordinary rain.
 - Lightweight daytime blue horizon scattering and warm orange/pink sunrise/sunset bands.
 - Smooth time-driven transition between daylight, twilight, and night layers.
 - Automatic fade-in at dusk and fade-out at dawn.
@@ -55,12 +55,13 @@ The project compiles in CI, but visual behavior still needs in-game validation. 
 - [x] Dedicated sky-render hook
 - [x] Low-cost Milky Way haze
 - [x] Day/night fade
+- [ ] Add a dedicated sun/moon glow pass after validating vanilla celestial transforms
 - [ ] Verify visual orientation, brightness, and render-state restoration in-game
 - [x] Basic daytime atmosphere and twilight color bands
 - [x] Lightweight nebula cloud patches
 - [x] Lightweight distant spiral galaxies
 - [x] Lightweight shooting stars
-- [x] Rain-aware galaxy and nebula fading
+- [x] Rain- and thunder-aware galaxy, nebula, and daytime atmosphere fading
 - [ ] Configuration screen and quality presets
 - [ ] Mali / MobileGL / Sodium compatibility testing
 - [ ] Frame-generation compatibility testing
