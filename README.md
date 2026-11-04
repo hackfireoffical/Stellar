@@ -12,6 +12,7 @@ Stellar injects its sky geometry at the end of Minecraft's overworld sky-render 
 - Dense stars around a galactic band, with cool blue/lavender color variation.
 - Three-layer segmented blue-violet Milky Way haze, drawn in the same geometry batch.
 - Automatic fade-in at dusk and fade-out at dawn.
+- Two-slot animated shooting-star pool with short cool-white tails; events are randomized and night-only.
 - Configurable star count, star brightness, galaxy visibility, and galaxy brightness.
 - No custom framebuffer, bloom, texture sampling, or post-processing.
 
@@ -31,7 +32,7 @@ After launching once, edit `.minecraft/config/stellar.json`:
 }
 ```
 
-The shooting-star/comet settings are reserved for a later stage and do not currently spawn comets. Restart Minecraft after editing.
+`shootingStars` toggles the animated streaks, and `cometChancePerSecond` controls their spawn chance. Restart Minecraft after editing.
 
 ## Build and install
 
@@ -49,7 +50,7 @@ The project compiles in CI, but visual behavior still needs in-game validation. 
 - [x] Day/night fade
 - [ ] Verify visual orientation, brightness, and render-state restoration in-game
 - [ ] Nebula and distant galaxy detail
-- [ ] Shooting stars and comets
+- [x] Lightweight shooting stars
 - [ ] Weather blending
 - [ ] Configuration screen and quality presets
 - [ ] Mali / MobileGL / Sodium compatibility testing
