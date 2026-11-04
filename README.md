@@ -15,6 +15,7 @@ Stellar injects its sky geometry at the end of Minecraft's overworld sky-render 
 - Two distant three-arm spiral galaxies with a compact bright core, rendered as low-cost geometry.
 - Rain- and thunder-aware atmospheric fading; thunderstorms dim distant sky details more strongly than ordinary rain.
 - Lightweight daytime blue horizon scattering and warm orange/pink sunrise/sunset bands.
+- Eighteen cached, subtle high-sky cirrus wisps that fade with weather and warm gently at twilight; configurable strength, with no extra texture or framebuffer.
 - Smooth time-driven transition between daylight, twilight, and night layers.
 - Automatic fade-in at dusk and fade-out at dawn.
 - Two-slot animated shooting-star pool with short cool-white tails; events are randomized and night-only.
@@ -36,11 +37,13 @@ After launching once, edit `.minecraft/config/stellar.json`:
   "distantGalaxies": true,
   "distantGalaxyBrightness": 0.65,
   "shootingStars": true,
-  "cometChancePerSecond": 0.012
+  "cometChancePerSecond": 0.012,
+  "atmosphericWisps": true,
+  "atmosphericWispStrength": 0.7
 }
 ```
 
-`shootingStars` toggles the animated streaks, and `cometChancePerSecond` controls their spawn chance. Restart Minecraft after editing.
+`shootingStars` toggles the animated streaks, and `cometChancePerSecond` controls their spawn chance. `atmosphericWisps` toggles the subtle daytime cirrus layer, while `atmosphericWispStrength` controls its opacity. Restart Minecraft after editing.
 
 ## Build and install
 
@@ -63,6 +66,8 @@ The project compiles in CI, but visual behavior still needs in-game validation. 
 - [x] Lightweight distant spiral galaxies
 - [x] Lightweight shooting stars
 - [x] Rain- and thunder-aware galaxy, nebula, and daytime atmosphere fading
+- [x] Cached, configurable atmospheric cirrus wisps
+- [x] Tick-interpolated day/night and twilight transitions
 - [ ] Configuration screen and quality presets
 - [ ] Mali / MobileGL / Sodium compatibility testing
 - [ ] Frame-generation compatibility testing
