@@ -138,13 +138,15 @@ public final class StellarSkyRenderer {
         generatedCount = count;
     }
 
-    public static void renderSky(MatrixStack matrices, StellarConfig config, float nightFactor, float weatherFactor) {
-        if (config == null || !config.enabled || nightFactor <= 0.001f) return;
+    public static void renderSky(MatrixStack matrices, StellarConfig config, float nightFactor, float weatherFactor, float twilightFactor) {
+        if (config == null || !config.enabled) return;
 
         int count = MathHelper.clamp(config.starCount, 0, MAX_STARS);
         if (generatedCount != count) generate(count);
         float night = MathHelper.clamp(nightFactor, 0.0f, 1.0f);
         float weather = MathHelper.clamp(weatherFactor, 0.0f, 1.0f);
+        float twilight = MathHelper.clamp(twilightFactor, 0.0f, 1.0f);
+        float daylight = 1.0f - night;
         float brightness = MathHelper.clamp(config.starBrightness, 0.0f, 1.0f) * night * (0.85f + weather * 0.15f);
         updateComets(config, night);
 
@@ -160,9 +162,12 @@ public final class StellarSkyRenderer {
             buffer.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
             var matrix = matrices.peek().getPositionMatrix();
 
+            // Daylight atmosphere: a restrained horizon haze and warm twilight rim.
+            addDayAtmosphere(buffer, matrix, daylight, twilight, weather);
+
             // A soft, segmented blue-violet galactic band. The nested strips
             // create a feathered haze without textures or extra draw calls.
-            if (config.galaxyEnabled && config.galaxyBrightness > 0.001f) {
+            if (night > 0.001f && config.galaxyEnabled && config.galaxyBrightness > 0.001f) {
                 float galaxyStrength = MathHelper.clamp(config.galaxyBrightness, 0.0f, 1.0f);
                 addGalaxyBand(buffer, matrix, night, galaxyStrength);
                 addNebulae(buffer, matrix, night * weather, galaxyStrength);
@@ -186,7 +191,7 @@ public final class StellarSkyRenderer {
                 vertex(buffer, matrix, x + half, y - half, z, red, green, blue, alpha);
             }
 
-            if (config.shootingStars) {
+            if (night > 0.001f && config.shootingStars) {
                 renderComets(buffer, matrix, night);
             }
             BufferRenderer.drawWithGlobalProgram(buffer.end());
@@ -195,6 +200,44 @@ public final class StellarSkyRenderer {
             RenderSystem.enableDepthTest();
             RenderSystem.disableBlend();
             matrices.pop();
+        }
+    }
+
+    /** Low-cost horizon scattering made from three translucent sky bands. */
+    private static void addDayAtmosphere(BufferBuilder buffer, org.joml.Matrix4f matrix,
+                                         float daylight, float twilight, float weather) {
+        float clear = daylight * weather;
+        if (clear > 0.001f) {
+            addAtmosphereBand(buffer, matrix, 8.5f, 72, 142, 205, (int) (5.0f * clear));
+            addAtmosphereBand(buffer, matrix, 4.0f, 104, 166, 220, (int) (4.0f * clear));
+        }
+        if (twilight > 0.001f && weather > 0.05f) {
+            float glow = twilight * weather;
+            addAtmosphereBand(buffer, matrix, 3.0f, 255, 112, 66, (int) (16.0f * glow));
+            addAtmosphereBand(buffer, matrix, 1.4f, 255, 174, 112, (int) (11.0f * glow));
+        }
+    }
+
+    private static void addAtmosphereBand(BufferBuilder buffer, org.joml.Matrix4f matrix,
+                                          float width, int red, int green, int blue, int alpha) {
+        if (alpha <= 0) return;
+        final int segments = 72;
+        final double step = Math.PI * 2.0 / segments;
+        float lowY = -width;
+        float highY = width;
+        float lowRadius = (float) Math.sqrt(RADIUS * RADIUS - lowY * lowY);
+        float highRadius = (float) Math.sqrt(RADIUS * RADIUS - highY * highY);
+        for (int i = 0; i < segments; i++) {
+            double a0 = i * step;
+            double a1 = (i + 1) * step;
+            vertex(buffer, matrix, (float) Math.cos(a0) * lowRadius, lowY,
+                    (float) Math.sin(a0) * lowRadius, red, green, blue, alpha);
+            vertex(buffer, matrix, (float) Math.cos(a0) * highRadius, highY,
+                    (float) Math.sin(a0) * highRadius, red, green, blue, alpha);
+            vertex(buffer, matrix, (float) Math.cos(a1) * highRadius, highY,
+                    (float) Math.sin(a1) * highRadius, red, green, blue, alpha);
+            vertex(buffer, matrix, (float) Math.cos(a1) * lowRadius, lowY,
+                    (float) Math.sin(a1) * lowRadius, red, green, blue, alpha);
         }
     }
 
