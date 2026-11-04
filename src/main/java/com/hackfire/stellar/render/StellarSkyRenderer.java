@@ -42,7 +42,7 @@ public final class StellarSkyRenderer {
     private static final int NEBULA_COUNT = 32;
     private static final int CIRRUS_COUNT = 18;
     // x, y, z, width, alpha; generated once and reused for every frame.
-    private static final float[] CIRRUS = new float[CIRRUS_COUNT * 5];
+    private static final float[] CIRRUS = new float[CIRRUS_COUNT * 10];
     private static boolean cirrusGenerated;
     // x, y, z, radius, red, green, blue, alpha
     private static final float[] NEBULAE = new float[NEBULA_COUNT * 8];
@@ -64,17 +64,30 @@ public final class StellarSkyRenderer {
             double angle = random.nextDouble() * Math.PI * 2.0;
             double y = -0.08 + random.nextDouble() * 0.34;
             double ring = Math.sqrt(1.0 - y * y);
-            int p = i * 5;
-            CIRRUS[p] = (float) Math.cos(angle) * (float) ring;
-            CIRRUS[p + 1] = (float) y;
-            CIRRUS[p + 2] = (float) Math.sin(angle) * (float) ring;
-            CIRRUS[p + 3] = 4.0f + random.nextFloat() * 7.0f;
-            CIRRUS[p + 4] = 3.0f + random.nextFloat() * 4.0f;
+            float dx = (float) Math.cos(angle) * (float) ring;
+            float dy = (float) y;
+            float dz = (float) Math.sin(angle) * (float) ring;
+            float rx = -dz, rz = dx;
+            float length = (float) Math.sqrt(rx * rx + rz * rz);
+            if (length < 0.001f) { rx = 1.0f; rz = 0.0f; length = 1.0f; }
+            rx /= length;
+            rz /= length;
+            int p = i * 10;
+            CIRRUS[p] = dx * (RADIUS - 1.4f);
+            CIRRUS[p + 1] = dy * (RADIUS - 1.4f);
+            CIRRUS[p + 2] = dz * (RADIUS - 1.4f);
+            CIRRUS[p + 3] = rx;
+            CIRRUS[p + 4] = rz;
+            CIRRUS[p + 5] = dy * rz;
+            CIRRUS[p + 6] = dz * rx - dx * rz;
+            CIRRUS[p + 7] = -dy * rx;
+            CIRRUS[p + 8] = 4.0f + random.nextFloat() * 7.0f;
+            CIRRUS[p + 9] = 3.0f + random.nextFloat() * 4.0f;
         }
         cirrusGenerated = true;
     }
 
-    /** Very subtle high-sky cirrus accents; static geometry keeps the pass inexpensive. */
+    /** Very subtle high-sky cirrus accents; all orientation math is cached. */
     private static void addAtmosphericWisps(BufferBuilder buffer, org.joml.Matrix4f matrix,
                                              float daylight, float twilight, float weather,
                                              float strength) {
@@ -82,28 +95,16 @@ public final class StellarSkyRenderer {
         float visibility = MathHelper.clamp(Math.max(daylight * 0.72f, twilight), 0.0f, 1.0f)
                 * weather * MathHelper.clamp(strength, 0.0f, 1.0f);
         if (visibility <= 0.001f) return;
+        int red = twilight > 0.15f ? 226 : 196;
+        int green = twilight > 0.15f ? 190 : 211;
+        int blue = twilight > 0.15f ? 176 : 232;
         for (int i = 0; i < CIRRUS_COUNT; i++) {
-            int p = i * 5;
-            float dx = CIRRUS[p], dy = CIRRUS[p + 1], dz = CIRRUS[p + 2];
-            float cx = dx * (RADIUS - 1.4f);
-            float cy = dy * (RADIUS - 1.4f);
-            float cz = dz * (RADIUS - 1.4f);
-            float rx = -dz, rz = dx;
-            float length = (float) Math.sqrt(rx * rx + rz * rz);
-            if (length < 0.001f) { rx = 1.0f; rz = 0.0f; length = 1.0f; }
-            rx /= length;
-            rz /= length;
-            float ux = dy * rz;
-            float uy = dz * rx - dx * rz;
-            float uz = -dy * rx;
-            float width = CIRRUS[p + 3];
-            int alpha = (int) (CIRRUS[p + 4] * visibility);
-            // Cool white by day, gently warmed during sunrise and sunset.
-            int red = twilight > 0.15f ? 226 : 196;
-            int green = twilight > 0.15f ? 190 : 211;
-            int blue = twilight > 0.15f ? 176 : 232;
-            addNebulaQuad(buffer, matrix, cx, cy, cz, rx, 0.0f, rz,
-                    ux, uy, uz, width, red, green, blue, alpha);
+            int p = i * 10;
+            int alpha = (int) (CIRRUS[p + 9] * visibility);
+            addNebulaQuad(buffer, matrix, CIRRUS[p], CIRRUS[p + 1], CIRRUS[p + 2],
+                    CIRRUS[p + 3], 0.0f, CIRRUS[p + 4],
+                    CIRRUS[p + 5], CIRRUS[p + 6], CIRRUS[p + 7],
+                    CIRRUS[p + 8], red, green, blue, alpha);
         }
     }
 
