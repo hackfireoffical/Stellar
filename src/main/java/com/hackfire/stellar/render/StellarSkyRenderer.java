@@ -20,6 +20,22 @@ public final class StellarSkyRenderer {
     private static final int MAX_STARS = 1800;
     private static final float RADIUS = 96.0f;
     private static final int GALAXY_SEGMENTS = 72;
+    // Shared unit-circle samples avoid repeated trigonometry and temporary arrays per frame.
+    private static final float[] RING_COS = new float[GALAXY_SEGMENTS];
+    private static final float[] RING_SIN = new float[GALAXY_SEGMENTS];
+    private static final float[] GALAXY_WIDTHS = { 5.8f, 3.5f, 1.65f };
+    private static final int[][] GALAXY_COLORS = {
+            { 42, 58, 132, 10 },
+            { 76, 83, 180, 13 },
+            { 126, 112, 210, 15 }
+    };
+    static {
+        for (int i = 0; i < GALAXY_SEGMENTS; i++) {
+            double angle = i * (Math.PI * 2.0 / GALAXY_SEGMENTS);
+            RING_COS[i] = (float) Math.cos(angle);
+            RING_SIN[i] = (float) Math.sin(angle);
+        }
+    }
     // x, y, z, half-size, brightness, red, green, blue
     private static final float[] STARS = new float[MAX_STARS * 8];
     private static int generatedCount = -1;
@@ -221,57 +237,46 @@ public final class StellarSkyRenderer {
     private static void addAtmosphereBand(BufferBuilder buffer, org.joml.Matrix4f matrix,
                                           float width, int red, int green, int blue, int alpha) {
         if (alpha <= 0) return;
-        final int segments = 72;
-        final double step = Math.PI * 2.0 / segments;
         float lowY = -width;
         float highY = width;
         float lowRadius = (float) Math.sqrt(RADIUS * RADIUS - lowY * lowY);
         float highRadius = (float) Math.sqrt(RADIUS * RADIUS - highY * highY);
-        for (int i = 0; i < segments; i++) {
-            double a0 = i * step;
-            double a1 = (i + 1) * step;
-            vertex(buffer, matrix, (float) Math.cos(a0) * lowRadius, lowY,
-                    (float) Math.sin(a0) * lowRadius, red, green, blue, alpha);
-            vertex(buffer, matrix, (float) Math.cos(a0) * highRadius, highY,
-                    (float) Math.sin(a0) * highRadius, red, green, blue, alpha);
-            vertex(buffer, matrix, (float) Math.cos(a1) * highRadius, highY,
-                    (float) Math.sin(a1) * highRadius, red, green, blue, alpha);
-            vertex(buffer, matrix, (float) Math.cos(a1) * lowRadius, lowY,
-                    (float) Math.sin(a1) * lowRadius, red, green, blue, alpha);
+        for (int i = 0; i < GALAXY_SEGMENTS; i++) {
+            int next = (i + 1) % GALAXY_SEGMENTS;
+            vertex(buffer, matrix, RING_COS[i] * lowRadius, lowY,
+                    RING_SIN[i] * lowRadius, red, green, blue, alpha);
+            vertex(buffer, matrix, RING_COS[i] * highRadius, highY,
+                    RING_SIN[i] * highRadius, red, green, blue, alpha);
+            vertex(buffer, matrix, RING_COS[next] * highRadius, highY,
+                    RING_SIN[next] * highRadius, red, green, blue, alpha);
+            vertex(buffer, matrix, RING_COS[next] * lowRadius, lowY,
+                    RING_SIN[next] * lowRadius, red, green, blue, alpha);
         }
     }
 
     private static void addGalaxyBand(BufferBuilder buffer, org.joml.Matrix4f matrix,
                                       float night, float strength) {
-        final double step = Math.PI * 2.0 / GALAXY_SEGMENTS;
-        final float[] widths = { 5.8f, 3.5f, 1.65f };
-        final int[][] colors = {
-                { 42, 58, 132, 10 },
-                { 76, 83, 180, 13 },
-                { 126, 112, 210, 15 }
-        };
-        for (int layer = 0; layer < widths.length; layer++) {
-            float width = widths[layer];
-            int[] c = colors[layer];
+        for (int layer = 0; layer < GALAXY_WIDTHS.length; layer++) {
+            float width = GALAXY_WIDTHS[layer];
+            int[] c = GALAXY_COLORS[layer];
             int alpha = (int) (c[3] * strength * night);
             for (int i = 0; i < GALAXY_SEGMENTS; i++) {
-                double a0 = i * step;
-                double a1 = (i + 1) * step;
-                addBandQuad(buffer, matrix, a0, a1, width, c[0], c[1], c[2], alpha);
+                addBandQuad(buffer, matrix, i, (i + 1) % GALAXY_SEGMENTS,
+                        width, c[0], c[1], c[2], alpha);
             }
         }
     }
 
     private static void addBandQuad(BufferBuilder buffer, org.joml.Matrix4f matrix,
-                                    double a0, double a1, float width,
+                                    int i0, int i1, float width,
                                     int red, int green, int blue, int alpha) {
         float y0 = -width, y1 = width;
         float r0 = (float) Math.sqrt(RADIUS * RADIUS - y0 * y0);
         float r1 = (float) Math.sqrt(RADIUS * RADIUS - y1 * y1);
-        vertex(buffer, matrix, (float) Math.cos(a0) * r0, y0, (float) Math.sin(a0) * r0, red, green, blue, alpha);
-        vertex(buffer, matrix, (float) Math.cos(a0) * r1, y1, (float) Math.sin(a0) * r1, red, green, blue, alpha);
-        vertex(buffer, matrix, (float) Math.cos(a1) * r1, y1, (float) Math.sin(a1) * r1, red, green, blue, alpha);
-        vertex(buffer, matrix, (float) Math.cos(a1) * r0, y0, (float) Math.sin(a1) * r0, red, green, blue, alpha);
+        vertex(buffer, matrix, RING_COS[i0] * r0, y0, RING_SIN[i0] * r0, red, green, blue, alpha);
+        vertex(buffer, matrix, RING_COS[i0] * r1, y1, RING_SIN[i0] * r1, red, green, blue, alpha);
+        vertex(buffer, matrix, RING_COS[i1] * r1, y1, RING_SIN[i1] * r1, red, green, blue, alpha);
+        vertex(buffer, matrix, RING_COS[i1] * r0, y0, RING_SIN[i1] * r0, red, green, blue, alpha);
     }
 
 
