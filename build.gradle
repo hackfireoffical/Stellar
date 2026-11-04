@@ -8,7 +8,10 @@ group = project.maven_group
 
 base { archivesName = project.archives_base_name }
 
-repositories { }
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.fabricmc.net/' }
+}
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
