@@ -138,14 +138,15 @@ public final class StellarSkyRenderer {
         generatedCount = count;
     }
 
-    public static void renderSky(MatrixStack matrices, StellarConfig config, float nightFactor) {
+    public static void renderSky(MatrixStack matrices, StellarConfig config, float nightFactor, float weatherFactor) {
         if (config == null || !config.enabled || nightFactor <= 0.001f) return;
 
         int count = MathHelper.clamp(config.starCount, 0, MAX_STARS);
         if (generatedCount != count) generate(count);
         float night = MathHelper.clamp(nightFactor, 0.0f, 1.0f);
-        float brightness = MathHelper.clamp(config.starBrightness, 0.0f, 1.0f) * night;
-        float frameSeconds = updateComets(config, night);
+        float weather = MathHelper.clamp(weatherFactor, 0.0f, 1.0f);
+        float brightness = MathHelper.clamp(config.starBrightness, 0.0f, 1.0f) * night * (0.85f + weather * 0.15f);
+        updateComets(config, night);
 
         matrices.push();
         RenderSystem.enableBlend();
@@ -164,7 +165,11 @@ public final class StellarSkyRenderer {
             if (config.galaxyEnabled && config.galaxyBrightness > 0.001f) {
                 float galaxyStrength = MathHelper.clamp(config.galaxyBrightness, 0.0f, 1.0f);
                 addGalaxyBand(buffer, matrix, night, galaxyStrength);
-                addNebulae(buffer, matrix, night, galaxyStrength);
+                addNebulae(buffer, matrix, night * weather, galaxyStrength);
+                if (config.distantGalaxies && config.distantGalaxyBrightness > 0.001f) {
+                    addDistantGalaxies(buffer, matrix, night * weather,
+                            MathHelper.clamp(config.distantGalaxyBrightness, 0.0f, 1.0f));
+                }
             }
 
             for (int i = 0; i < count; i++) {
@@ -226,6 +231,64 @@ public final class StellarSkyRenderer {
         vertex(buffer, matrix, (float) Math.cos(a1) * r0, y0, (float) Math.sin(a1) * r0, red, green, blue, alpha);
     }
 
+
+    /** Two tiny spiral galaxies, built from cached deterministic point geometry. */
+    private static void addDistantGalaxies(BufferBuilder buffer, org.joml.Matrix4f matrix,
+                                           float night, float strength) {
+        addSpiralGalaxy(buffer, matrix, 1.05f, 0.16f, 0.82f, night, strength,
+                118, 145, 235);
+        addSpiralGalaxy(buffer, matrix, 4.12f, -0.12f, 0.58f, night, strength,
+                174, 145, 238);
+    }
+
+    private static void addSpiralGalaxy(BufferBuilder buffer, org.joml.Matrix4f matrix,
+                                       float centerAngle, float centerY, float scale,
+                                       float night, float strength,
+                                       int red, int green, int blue) {
+        float horizontal = (float) Math.sqrt(1.0f - centerY * centerY);
+        float dirX = (float) Math.cos(centerAngle) * horizontal;
+        float dirY = centerY;
+        float dirZ = (float) Math.sin(centerAngle) * horizontal;
+        float rightX = -(float) Math.sin(centerAngle);
+        float rightZ = (float) Math.cos(centerAngle);
+        float upX = -centerY * (float) Math.cos(centerAngle);
+        float upY = horizontal;
+        float upZ = -centerY * (float) Math.sin(centerAngle);
+        float cx = dirX * (RADIUS - 1.2f);
+        float cy = dirY * (RADIUS - 1.2f);
+        float cz = dirZ * (RADIUS - 1.2f);
+        final int arms = 3;
+        final int pointsPerArm = 22;
+        for (int arm = 0; arm < arms; arm++) {
+            for (int point = 0; point < pointsPerArm; point++) {
+                float t = point / (float) (pointsPerArm - 1);
+                float radius = (0.16f + t * 2.25f) * scale;
+                float angle = arm * (float) (Math.PI * 2.0 / arms) + t * 5.2f;
+                float localX = (float) Math.cos(angle) * radius;
+                float localY = (float) Math.sin(angle) * radius * 0.58f;
+                float x = cx + rightX * localX + upX * localY;
+                float y = cy + upY * localY;
+                float z = cz + rightZ * localX + upZ * localY;
+                float size = (0.035f + (1.0f - t) * 0.025f) * scale;
+                int alpha = (int) ((38.0f + (1.0f - t) * 42.0f) * night * strength);
+                int shade = 0.72f + (int) (28.0f * (1.0f - t));
+                int r = Math.min(255, red * shade / 100);
+                int g = Math.min(255, green * shade / 100);
+                int b = Math.min(255, blue * shade / 100);
+                vertex(buffer, matrix, x-size, y-size, z, r, g, b, alpha);
+                vertex(buffer, matrix, x-size, y+size, z, r, g, b, alpha);
+                vertex(buffer, matrix, x+size, y+size, z, r, g, b, alpha);
+                vertex(buffer, matrix, x+size, y-size, z, r, g, b, alpha);
+            }
+        }
+        // Brighter central bulge.
+        float core = 0.22f * scale;
+        int coreAlpha = (int) (75.0f * night * strength);
+        vertex(buffer, matrix, cx-core, cy-core, cz, 220, 225, 255, coreAlpha);
+        vertex(buffer, matrix, cx-core, cy+core, cz, 220, 225, 255, coreAlpha);
+        vertex(buffer, matrix, cx+core, cy+core, cz, 220, 225, 255, coreAlpha);
+        vertex(buffer, matrix, cx+core, cy-core, cz, 220, 225, 255, coreAlpha);
+    }
 
     /** Advances a tiny fixed pool of comets; no objects are allocated per frame. */
     private static float updateComets(StellarConfig config, float night) {
