@@ -271,7 +271,7 @@ public final class StellarSkyRenderer {
                 float z = cz + rightZ * localX + upZ * localY;
                 float size = (0.035f + (1.0f - t) * 0.025f) * scale;
                 int alpha = (int) ((38.0f + (1.0f - t) * 42.0f) * night * strength);
-                int shade = 0.72f + (int) (28.0f * (1.0f - t));
+                int shade = 72 + (int) (28.0f * (1.0f - t));
                 int r = Math.min(255, red * shade / 100);
                 int g = Math.min(255, green * shade / 100);
                 int b = Math.min(255, blue * shade / 100);
