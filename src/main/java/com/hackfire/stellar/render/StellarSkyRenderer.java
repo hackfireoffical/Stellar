@@ -23,6 +23,14 @@ public final class StellarSkyRenderer {
     // x, y, z, half-size, brightness, red, green, blue
     private static final float[] STARS = new float[MAX_STARS * 8];
     private static int generatedCount = -1;
+    private static final int MAX_COMETS = 2;
+    private static final float[] COMET_ANGLE = new float[MAX_COMETS];
+    private static final float[] COMET_HEIGHT = new float[MAX_COMETS];
+    private static final float[] COMET_LIFE = new float[MAX_COMETS];
+    private static final float[] COMET_DURATION = new float[MAX_COMETS];
+    private static final float[] COMET_SPEED = new float[MAX_COMETS];
+    private static final Random COMET_RANDOM = Random.create(0xC04E7L);
+    private static long lastCometUpdateNanos;
 
     private StellarSkyRenderer() { }
 
@@ -66,6 +74,7 @@ public final class StellarSkyRenderer {
         if (generatedCount != count) generate(count);
         float night = MathHelper.clamp(nightFactor, 0.0f, 1.0f);
         float brightness = MathHelper.clamp(config.starBrightness, 0.0f, 1.0f) * night;
+        float frameSeconds = updateComets(config, night);
 
         matrices.push();
         RenderSystem.enableBlend();
@@ -98,6 +107,10 @@ public final class StellarSkyRenderer {
                 vertex(buffer, matrix, x - half, y + half, z, red, green, blue, alpha);
                 vertex(buffer, matrix, x + half, y + half, z, red, green, blue, alpha);
                 vertex(buffer, matrix, x + half, y - half, z, red, green, blue, alpha);
+            }
+
+            if (config.shootingStars) {
+                renderComets(buffer, matrix, night);
             }
             BufferRenderer.drawWithGlobalProgram(buffer.end());
         } finally {
@@ -139,6 +152,68 @@ public final class StellarSkyRenderer {
         vertex(buffer, matrix, (float) Math.cos(a0) * r1, y1, (float) Math.sin(a0) * r1, red, green, blue, alpha);
         vertex(buffer, matrix, (float) Math.cos(a1) * r1, y1, (float) Math.sin(a1) * r1, red, green, blue, alpha);
         vertex(buffer, matrix, (float) Math.cos(a1) * r0, y0, (float) Math.sin(a1) * r0, red, green, blue, alpha);
+    }
+
+
+    /** Advances a tiny fixed pool of comets; no objects are allocated per frame. */
+    private static float updateComets(StellarConfig config, float night) {
+        long now = System.nanoTime();
+        if (lastCometUpdateNanos == 0L) {
+            lastCometUpdateNanos = now;
+            return 0.0f;
+        }
+        float delta = Math.min(0.1f, (now - lastCometUpdateNanos) / 1_000_000_000.0f);
+        lastCometUpdateNanos = now;
+        if (night <= 0.01f || !config.shootingStars) {
+            for (int i = 0; i < MAX_COMETS; i++) COMET_LIFE[i] = 0.0f;
+            return delta;
+        }
+
+        float chance = MathHelper.clamp(config.cometChancePerSecond, 0.0f, 0.1f);
+        if (COMET_RANDOM.nextFloat() < chance * delta) {
+            for (int i = 0; i < MAX_COMETS; i++) {
+                if (COMET_LIFE[i] <= 0.0f) {
+                    COMET_ANGLE[i] = COMET_RANDOM.nextFloat() * (float) (Math.PI * 2.0);
+                    COMET_HEIGHT[i] = (COMET_RANDOM.nextFloat() - 0.5f) * 34.0f;
+                    COMET_DURATION[i] = 1.1f + COMET_RANDOM.nextFloat() * 1.2f;
+                    COMET_LIFE[i] = COMET_DURATION[i];
+                    COMET_SPEED[i] = 0.16f + COMET_RANDOM.nextFloat() * 0.12f;
+                    break;
+                }
+            }
+        }
+        for (int i = 0; i < MAX_COMETS; i++) {
+            if (COMET_LIFE[i] > 0.0f) {
+                COMET_LIFE[i] -= delta;
+                COMET_ANGLE[i] += COMET_SPEED[i] * delta;
+            }
+        }
+        return delta;
+    }
+
+    private static void renderComets(BufferBuilder buffer, org.joml.Matrix4f matrix, float night) {
+        for (int i = 0; i < MAX_COMETS; i++) {
+            float remaining = COMET_LIFE[i];
+            if (remaining <= 0.0f) continue;
+            float progress = 1.0f - remaining / COMET_DURATION[i];
+            float fadeIn = Math.min(1.0f, progress * 5.0f);
+            float fadeOut = Math.min(1.0f, remaining * 2.5f);
+            int alpha = (int) (220.0f * night * fadeIn * fadeOut);
+            float angle = COMET_ANGLE[i];
+            float y = COMET_HEIGHT[i];
+            float ring = (float) Math.sqrt(RADIUS * RADIUS - y * y);
+            float headX = (float) Math.cos(angle) * ring;
+            float headZ = (float) Math.sin(angle) * ring;
+            float tailLength = 2.2f + progress * 2.2f;
+            float tailX = (float) Math.sin(angle) * tailLength;
+            float tailZ = -(float) Math.cos(angle) * tailLength;
+            float halfWidth = 0.11f;
+            // Bright head and a slim cool-white tail in the same sky batch.
+            vertex(buffer, matrix, headX - halfWidth, y, headZ, 205, 225, 255, alpha);
+            vertex(buffer, matrix, headX + halfWidth, y, headZ, 205, 225, 255, alpha);
+            vertex(buffer, matrix, headX + tailX + halfWidth * 0.25f, y, headZ + tailZ, 112, 164, 255, alpha / 3);
+            vertex(buffer, matrix, headX + tailX - halfWidth * 0.25f, y, headZ + tailZ, 112, 164, 255, alpha / 3);
+        }
     }
 
     private static void vertex(BufferBuilder buffer, org.joml.Matrix4f matrix,
