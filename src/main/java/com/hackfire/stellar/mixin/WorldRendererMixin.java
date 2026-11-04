@@ -38,6 +38,12 @@ public abstract class WorldRendererMixin {
         }
         float rain = client.world.getRainGradient(tickDelta);
         float weatherVisibility = 1.0f - MathHelper.clamp(rain, 0.0f, 1.0f) * 0.68f;
-        StellarSkyRenderer.renderSky(matrices, StellarClient.config(), night, weatherVisibility);
+        float sunset = time >= 11000L && time <= 15000L
+                ? 1.0f - Math.abs(time - 13000L) / 2000.0f : 0.0f;
+        float sunrise = time >= 22000L
+                ? 1.0f - Math.abs(time - 23000L) / 1000.0f
+                : (time <= 1000L ? 1.0f - Math.abs(time - 0L) / 1000.0f : 0.0f);
+        float twilight = MathHelper.clamp(Math.max(sunset, sunrise), 0.0f, 1.0f);
+        StellarSkyRenderer.renderSky(matrices, StellarClient.config(), night, weatherVisibility, twilight);
     }
 }
